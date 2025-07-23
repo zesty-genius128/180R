@@ -12,7 +12,7 @@ const wss = new WebSocket.Server({ server });
 
 // Configuration
 const PORT = process.env.PORT || 3001;
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5000';
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5001';
 const REACT_BUILD_PATH = path.join(__dirname, '../frontend/build');
 
 // Middleware

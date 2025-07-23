@@ -12,8 +12,14 @@ from sklearn.preprocessing import StandardScaler
 import warnings
 warnings.filterwarnings('ignore')
 
+# Import ML strategy engine
+from ml_models.strategy_engine import ml_blueprint
+
 app = Flask(__name__)
 CORS(app)
+
+# Register ML Blueprint
+app.register_blueprint(ml_blueprint)
 
 # Enable FastF1 caching
 ff1.Cache.enable_cache('./cache')
@@ -288,8 +294,11 @@ def compare_drivers():
     return jsonify(comparison)
 
 if __name__ == '__main__':
+    # Use port 5001 to avoid conflict with macOS AirPlay Receiver on port 5000
+    port = int(os.environ.get('FLASK_PORT', 5001))
+    
     print("🏁 F1 Predictor Backend Starting...")
     print("📊 FastF1 Cache enabled")
-    print("🌐 API available at: http://localhost:5000")
+    print(f"🌐 API available at: http://localhost:{port}")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=port)
