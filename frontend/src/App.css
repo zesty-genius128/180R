@@ -16,6 +16,7 @@
   --accent-silver: #c0c0c0;
   --accent-bronze: #cd7f32;
   --accent-orange: #ff8700;
+  --help-purple: #9b59b6;
 }
 
 /* Global Styles */
@@ -260,6 +261,17 @@ body::before {
   background: rgba(0, 212, 100, 0.2);
   color: var(--accent-green);
   border: 1px solid rgba(0, 212, 100, 0.4);
+}
+
+.btn-help {
+  background: rgba(155, 89, 182, 0.2);
+  color: var(--help-purple);
+  border: 1px solid rgba(155, 89, 182, 0.4);
+}
+
+.btn-help:hover:not(:disabled) {
+  background: rgba(155, 89, 182, 0.3);
+  border-color: var(--help-purple);
 }
 
 /* Dashboard Styles */

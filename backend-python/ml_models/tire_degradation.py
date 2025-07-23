@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import mean_squared_error, r2_score
 import joblib
-import fastf1 as ff1
+import requests
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
@@ -71,7 +71,7 @@ class TireDegradationPredictor:
         
     def collect_historical_data(self, years=[2022, 2023, 2024], max_events_per_year=10):
         """
-        Collect historical F1 data for tire degradation analysis.
+        Generate synthetic historical F1 data for tire degradation analysis.
         
         Args:
             years: List of F1 seasons to analyze
@@ -80,166 +80,79 @@ class TireDegradationPredictor:
         Returns:
             DataFrame with tire performance data
         """
-        print("🏎️ Collecting F1 tire degradation data...")
+        print("🏎️ Generating F1 tire degradation training data...")
         all_data = []
         
+        # Realistic F1 tracks with different tire wear characteristics
+        tracks = [
+            ('Monaco', 0.3), ('Hungary', 0.4), ('Singapore', 0.5),
+            ('Spain', 0.6), ('Austria', 0.6), ('Netherlands', 0.6),
+            ('Belgium', 0.7), ('Italy', 0.7), ('Brazil', 0.7),
+            ('Britain', 0.8), ('Turkey', 0.8), ('Abu Dhabi', 0.8),
+            ('Bahrain', 0.9), ('Saudi Arabia', 0.9), ('Australia', 0.9)
+        ]
+        
+        drivers = list(self.driver_tire_skills.keys())
+        compounds = ['SOFT', 'MEDIUM', 'HARD']
+        
+        # Generate realistic training data
         for year in years:
-            print(f"📅 Processing {year} season...")
+            print(f"📅 Generating {year} season data...")
             
-            try:
-                # Get season schedule
-                schedule = ff1.get_event_schedule(year)
-                events = schedule.head(max_events_per_year)  # Limit for demo
-                
-                for _, event in events.iterrows():
-                    event_name = event['EventName']
-                    print(f"  🏁 {event_name}...")
-                    
-                    try:
-                        # Analyze race session
-                        session = ff1.get_session(year, event_name, 'R')
-                        session.load()
-                        
-                        if session.laps.empty:
-                            continue
-                            
-                        # Extract tire data for each driver
-                        event_data = self._extract_tire_data(session, event_name, year)
-                        all_data.extend(event_data)
-                        
-                    except Exception as e:
-                        print(f"    ⚠️ Error processing {event_name}: {e}")
-                        continue
-                        
-            except Exception as e:
-                print(f"❌ Error processing {year} season: {e}")
-                continue
+            for track_name, track_severity in tracks[:max_events_per_year]:
+                for driver in drivers:
+                    for compound in compounds:
+                        # Generate multiple stint scenarios per driver/compound/track
+                        for stint_length in range(5, 35, 5):  # 5, 10, 15, ... 30 lap stints
+                            for tire_age in range(0, stint_length, 3):
+                                
+                                # Base degradation from compound
+                                base_rate = self.compound_base_degradation[compound]
+                                
+                                # Driver skill effect
+                                driver_skill = self.driver_tire_skills[driver]
+                                skill_multiplier = 2.0 - driver_skill  # Better drivers = less degradation
+                                
+                                # Track severity effect
+                                track_multiplier = 0.5 + track_severity
+                                
+                                # Temperature effect (random between 20-50°C)
+                                temp = np.random.uniform(20, 50)
+                                temp_multiplier = 0.7 + (temp - 20) * 0.02  # Hotter = more degradation
+                                
+                                # Fuel effect (heavier car at start)
+                                fuel_effect = max(0, (100 - tire_age * 2) * 0.003)
+                                
+                                # Calculate degradation with some noise
+                                degradation = (
+                                    base_rate * tire_age * skill_multiplier * 
+                                    track_multiplier * temp_multiplier + fuel_effect +
+                                    np.random.normal(0, 0.1)  # Random noise
+                                )
+                                
+                                # Ensure non-negative degradation
+                                degradation = max(0, degradation)
+                                
+                                all_data.append({
+                                    'degradation_seconds': degradation,
+                                    'tire_age': tire_age,
+                                    'compound': compound,
+                                    'driver': driver,
+                                    'track': track_name,
+                                    'year': year,
+                                    'track_temp': temp,
+                                    'lap_number': tire_age + np.random.randint(1, 10),
+                                    'driver_tire_skill': driver_skill,
+                                    'track_severity': track_severity,
+                                    'track_length': self._get_track_length(track_name),
+                                    'fuel_load_est': max(0, 110 - tire_age * 1.8),
+                                    'stint_position': tire_age + 1
+                                })
         
         df = pd.DataFrame(all_data)
-        print(f"✅ Collected {len(df)} tire performance data points")
+        print(f"✅ Generated {len(df)} tire performance data points")
         return df
     
-    def _extract_tire_data(self, session, event_name, year):
-        """Extract tire performance data from a race session."""
-        tire_data = []
-        
-        # Get unique drivers
-        drivers = session.laps['Driver'].unique()
-        
-        for driver in drivers:
-            if pd.isna(driver):
-                continue
-                
-            # Get driver's laps
-            driver_laps = session.laps.pick_driver(driver)
-            
-            if driver_laps.empty:
-                continue
-            
-            # Group by stint (consecutive laps on same tire)
-            stints = []
-            current_compound = None
-            stint_start = 0
-            
-            for i, (_, lap) in enumerate(driver_laps.iterrows()):
-                compound = lap.get('Compound', 'UNKNOWN')
-                
-                if compound != current_compound:
-                    if current_compound is not None:
-                        stints.append({
-                            'compound': current_compound,
-                            'start_lap': stint_start,
-                            'end_lap': i - 1,
-                            'laps': driver_laps.iloc[stint_start:i]
-                        })
-                    current_compound = compound
-                    stint_start = i
-            
-            # Add final stint
-            if current_compound is not None:
-                stints.append({
-                    'compound': current_compound,
-                    'start_lap': stint_start,
-                    'end_lap': len(driver_laps) - 1,
-                    'laps': driver_laps.iloc[stint_start:]
-                })
-            
-            # Analyze each stint for degradation
-            for stint in stints:
-                if len(stint['laps']) < 3:  # Need minimum laps for analysis
-                    continue
-                    
-                stint_data = self._analyze_stint_degradation(
-                    stint, driver, event_name, year, session
-                )
-                tire_data.extend(stint_data)
-        
-        return tire_data
-    
-    def _analyze_stint_degradation(self, stint, driver, event_name, year, session):
-        """Analyze tire degradation within a single stint."""
-        stint_data = []
-        laps = stint['laps']
-        compound = stint['compound']
-        
-        if compound not in self.compound_base_degradation:
-            return []
-        
-        # Find fastest lap in first 3 laps of stint (baseline)
-        first_laps = laps.head(3)
-        valid_times = first_laps['LapTime'].dropna()
-        
-        if valid_times.empty:
-            return []
-            
-        baseline_time = valid_times.min()
-        
-        # Analyze each lap in the stint
-        for tire_age, (_, lap) in enumerate(laps.iterrows()):
-            lap_time = lap.get('LapTime')
-            track_temp = lap.get('TrackTemp', 35)  # Default if missing
-            
-            if pd.isna(lap_time) or lap_time == 0:
-                continue
-            
-            # Calculate degradation (time delta from baseline)
-            degradation = (lap_time - baseline_time).total_seconds()
-            
-            # Skip outliers (pit laps, incidents, etc.)
-            if degradation < 0 or degradation > 10:
-                continue
-            
-            # Extract features
-            features = {
-                # Target variable
-                'degradation_seconds': degradation,
-                
-                # Core features
-                'tire_age': tire_age,
-                'compound': compound,
-                'driver': driver,
-                'track': event_name,
-                'year': year,
-                
-                # Conditions
-                'track_temp': track_temp,
-                'lap_number': lap.get('LapNumber', 0),
-                
-                # Driver skill
-                'driver_tire_skill': self.driver_tire_skills.get(driver, 0.8),
-                
-                # Track characteristics (simplified)
-                'track_severity': self._get_track_severity(event_name),
-                'track_length': self._get_track_length(event_name),
-                
-                # Session context
-                'fuel_load_est': max(0, 110 - (lap.get('LapNumber', 0) * 1.8)),  # Estimated fuel
-                'stint_position': tire_age + 1
-            }
-            
-            stint_data.append(features)
-        
-        return stint_data
     
     def _get_track_severity(self, track_name):
         """Get track severity rating for tire wear (0-1 scale)."""

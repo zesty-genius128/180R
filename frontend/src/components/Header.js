@@ -1,7 +1,7 @@
 // frontend/src/components/Header.js
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { RefreshCw, Activity, Wifi, WifiOff, Menu, X } from 'lucide-react';
+import { RefreshCw, Activity, Wifi, WifiOff, Menu, X, HelpCircle } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import toast from 'react-hot-toast';
 
@@ -13,7 +13,8 @@ const Header = ({
   onSessionChange,
   onRefresh,
   isAutoRefresh,
-  onToggleAutoRefresh
+  onToggleAutoRefresh,
+  onShowHelp
 }) => {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -115,6 +116,12 @@ const Header = ({
           >
             Schedule
           </Link>
+          <Link 
+            to="/tire-strategy" 
+            className={`nav-link ${isActivePage('/tire-strategy') ? 'nav-link-active' : ''}`}
+          >
+            🧠 AI Strategy
+          </Link>
         </nav>
 
         {/* Controls */}
@@ -166,6 +173,16 @@ const Header = ({
             <Activity className="w-4 h-4" />
             Auto: {isAutoRefresh ? 'ON' : 'OFF'}
           </button>
+
+          {/* Help Button */}
+          <button 
+            onClick={onShowHelp}
+            className="btn btn-help"
+            title="Show user guide"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Help
+          </button>
         </div>
 
         {/* Connection Status */}
@@ -206,6 +223,13 @@ const Header = ({
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Schedule
+          </Link>
+          <Link 
+            to="/tire-strategy" 
+            className="mobile-nav-link"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            🧠 AI Strategy
           </Link>
           
           <div className="mobile-controls">
