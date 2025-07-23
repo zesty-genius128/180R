@@ -194,6 +194,15 @@ class F1DataProcessor:
 # Initialize processor
 processor = F1DataProcessor()
 
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'OK',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'F1 Predictor Python Backend'
+    })
+
 @app.route('/api/schedule')
 def get_schedule():
     """Get F1 calendar"""
