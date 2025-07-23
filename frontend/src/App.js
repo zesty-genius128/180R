@@ -10,6 +10,8 @@ import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import ComparisonPage from './components/ComparisonPage';
 import SchedulePage from './components/SchedulePage';
+import TireStrategyAnalyzer from './components/TireStrategyAnalyzer';
+import WelcomeGuide from './components/WelcomeGuide';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Services
@@ -33,6 +35,9 @@ function App() {
   const [currentSession, setCurrentSession] = useState('Q');
   const [liveData, setLiveData] = useState(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(false);
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState(
+    !localStorage.getItem('f1-ai-pitwall-visited')
+  );
 
   // Initialize WebSocket connection
   useEffect(() => {
@@ -118,6 +123,15 @@ function App() {
     setIsAutoRefresh(!isAutoRefresh);
   };
 
+  const handleCloseWelcomeGuide = () => {
+    localStorage.setItem('f1-ai-pitwall-visited', 'true');
+    setShowWelcomeGuide(false);
+  };
+
+  const handleShowHelp = () => {
+    setShowWelcomeGuide(true);
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
@@ -131,6 +145,7 @@ function App() {
             onRefresh={refreshData}
             isAutoRefresh={isAutoRefresh}
             onToggleAutoRefresh={toggleAutoRefresh}
+            onShowHelp={handleShowHelp}
           />
           
           <main className="main-content">
@@ -159,6 +174,10 @@ function App() {
                 path="/schedule" 
                 element={<SchedulePage />} 
               />
+              <Route 
+                path="/tire-strategy" 
+                element={<TireStrategyAnalyzer />} 
+              />
             </Routes>
           </main>
           
@@ -173,6 +192,11 @@ function App() {
               },
             }}
           />
+
+          {/* Welcome Guide for new users */}
+          {showWelcomeGuide && (
+            <WelcomeGuide onClose={handleCloseWelcomeGuide} />
+          )}
         </div>
       </Router>
     </QueryClientProvider>

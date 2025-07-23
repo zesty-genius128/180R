@@ -8,18 +8,18 @@ services:
       dockerfile: Dockerfile
     container_name: f1-python-backend
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=False
-      - FLASK_PORT=5000
+      - FLASK_PORT=5001
       - CACHE_DIR=/app/cache
     volumes:
       - f1_cache:/app/cache
       - f1_logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -36,7 +36,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - PYTHON_API_URL=http://python-backend:5000
+      - PYTHON_API_URL=http://python-backend:5001
       - CORS_ORIGIN=http://localhost:3000
     depends_on:
       python-backend:

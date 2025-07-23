@@ -10,7 +10,7 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 echo "🐍 Starting Python backend..."
-cd backend-python && source venv/bin/activate && python app.py &
+cd backend-python && source venv/bin/activate && FLASK_PORT=5001 python app.py &
 
 sleep 10
 echo "🚀 Starting Node.js backend..."
@@ -22,7 +22,7 @@ cd frontend && npm start &
 
 echo ""
 echo "🎉 F1 Dashboard Starting!"
-echo "🐍 Python: http://localhost:5000"
+echo "🐍 Python: http://localhost:5001"
 echo "🚀 Node.js: http://localhost:3001" 
 echo "⚛️ React: http://localhost:3000"
 echo ""

@@ -147,6 +147,72 @@ class ApiService {
       throw new Error(`API request failed: ${error.message}`);
     }
   }
+
+  // === ML API Methods ===
+
+  // Get ML model status
+  async getMLModelStatus() {
+    try {
+      const response = await this.api.get('/ml/model-status');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get ML model status: ${error.message}`);
+    }
+  }
+
+  // Predict tire degradation
+  async predictTireDegradation(params) {
+    try {
+      const response = await this.api.post('/ml/tire-degradation', params);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to predict tire degradation: ${error.message}`);
+    }
+  }
+
+  // Analyze tire strategies
+  async analyzeTireStrategy(params) {
+    try {
+      const response = await this.api.post('/ml/tire-strategy', params, {
+        timeout: 30000 // Extended timeout for strategy analysis
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to analyze tire strategy: ${error.message}`);
+    }
+  }
+
+  // Get tire compound information
+  async getTireCompounds() {
+    try {
+      const response = await this.api.get('/ml/tire-compounds');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get tire compounds: ${error.message}`);
+    }
+  }
+
+  // Get driver tire management skills
+  async getDriverSkills() {
+    try {
+      const response = await this.api.get('/ml/driver-skills');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get driver skills: ${error.message}`);
+    }
+  }
+
+  // Train tire degradation model
+  async trainTireModel(params = {}) {
+    try {
+      const response = await this.api.post('/ml/train-tire-model', params, {
+        timeout: 300000 // 5 minutes for training
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to train tire model: ${error.message}`);
+    }
+  }
 }
 
 // Create singleton instance

@@ -12,13 +12,10 @@ const wss = new WebSocket.Server({ server });
 
 // Configuration
 const PORT = process.env.PORT || 3001;
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5000';
-const REACT_BUILD_PATH = path.join(__dirname, '../frontend/build');
-
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5001';
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(REACT_BUILD_PATH));
 
 // Cache for frequent requests
 const cache = new Map();
@@ -225,6 +222,146 @@ app.get('/api/current-weekend', async (req, res) => {
   }
 });
 
+// === ML API Routes ===
+
+// Get ML model status
+app.get('/api/ml/model-status', async (req, res) => {
+  try {
+    console.log('🧠 Fetching ML model status...');
+    const response = await axios.get(`${PYTHON_API_URL}/api/ml/model-status`, {
+      timeout: 10000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error fetching ML model status:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch ML model status',
+      message: error.message 
+    });
+  }
+});
+
+// Predict tire degradation
+app.post('/api/ml/tire-degradation', async (req, res) => {
+  try {
+    console.log('🏎️ Predicting tire degradation...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/tire-degradation`, req.body, {
+      timeout: 15000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error predicting tire degradation:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to predict tire degradation',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
+// Analyze tire strategies
+app.post('/api/ml/tire-strategy', async (req, res) => {
+  try {
+    console.log('📊 Analyzing tire strategies...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/tire-strategy`, req.body, {
+      timeout: 30000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error analyzing tire strategies:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to analyze tire strategies',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
+// Get tire compound information
+app.get('/api/ml/tire-compounds', async (req, res) => {
+  try {
+    console.log('🛞 Fetching tire compounds...');
+    const response = await axios.get(`${PYTHON_API_URL}/api/ml/tire-compounds`, {
+      timeout: 10000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error fetching tire compounds:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch tire compounds',
+      message: error.message 
+    });
+  }
+});
+
+// Get driver tire management skills
+app.get('/api/ml/driver-skills', async (req, res) => {
+  try {
+    console.log('👨‍🏎️ Fetching driver skills...');
+    const response = await axios.get(`${PYTHON_API_URL}/api/ml/driver-skills`, {
+      timeout: 10000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error fetching driver skills:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch driver skills',
+      message: error.message 
+    });
+  }
+});
+
+// Train tire degradation model
+app.post('/api/ml/train-tire-model', async (req, res) => {
+  try {
+    console.log('🏋️ Training tire degradation model...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/train-tire-model`, req.body, {
+      timeout: 300000 // 5 minutes for training
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error training tire model:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to train tire model',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
+// === Live Session API Routes ===
+
+// Get current/next F1 session info
+app.get('/api/current-session', async (req, res) => {
+  try {
+    console.log('🔴 Fetching current session info...');
+    const response = await axios.get(`${PYTHON_API_URL}/api/current-session`, {
+      timeout: 10000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error fetching current session:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch current session info',
+      message: error.message 
+    });
+  }
+});
+
+// Get live timing data during sessions
+app.get('/api/live-timing', async (req, res) => {
+  try {
+    console.log('⏱️ Fetching live timing data...');
+    const response = await axios.get(`${PYTHON_API_URL}/api/live-timing`, {
+      timeout: 10000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error fetching live timing:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch live timing data',
+      message: error.message 
+    });
+  }
+});
+
 // Helper function to determine current session
 function getCurrentSession(event) {
   const now = new Date();
@@ -283,10 +420,7 @@ setInterval(async () => {
   }
 }, 60000); // Every minute during race weekends
 
-// Serve React app for all non-API routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(REACT_BUILD_PATH, 'index.html'));
-});
+// API-only server - React is served separately
 
 // Error handling middleware
 app.use((error, req, res, next) => {
