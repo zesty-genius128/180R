@@ -589,3 +589,86 @@ def compare_strategies():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ===== INTELLIGENT STRATEGY TRAINING ENDPOINTS =====
+
+@ml_blueprint.route('/train-intelligent-strategy', methods=['POST'])
+def train_intelligent_strategy():
+    """
+    Train RL strategy using real F1 team methodology.
+    
+    This approach mimics how teams like Mercedes and Red Bull prepare:
+    1. Use historical track-specific data as baseline
+    2. Adjust for current season car performance trends  
+    3. Account for championship pressure and race number
+    4. Train multiple scenarios (conservative/aggressive/balanced)
+    
+    POST /api/ml/train-intelligent-strategy
+    {
+        "track": "Spa",
+        "race_number": 13,
+        "episodes_per_scenario": 30,
+        "focus_drivers": ["HAM", "VER", "LEC", "NOR"]
+    }
+    """
+    try:
+        data = request.get_json() or {}
+        
+        track = data.get('track', 'Spa')
+        race_number = data.get('race_number', 13)  # Spa is typically race 13
+        episodes_per_scenario = data.get('episodes_per_scenario', 30)
+        focus_drivers = data.get('focus_drivers', ['HAM', 'VER', 'LEC', 'NOR', 'RUS'])
+        
+        print(f"🧠 Starting intelligent strategy training for {track} (Race #{race_number})")
+        
+        # Initialize intelligent trainer
+        trainer = IntelligentF1StrategyTrainer()
+        
+        # Train the model with intelligent scenarios
+        agent, training_results = trainer.train_intelligent_strategy_model(
+            track=track,
+            race_number=race_number,
+            episodes_per_scenario=episodes_per_scenario
+        )
+        
+        # Save the intelligently trained model
+        os.makedirs('ml_models/models', exist_ok=True)
+        model_path = f'ml_models/models/intelligent_strategy_{track.lower()}_race{race_number}.pkl'
+        agent.save_model(model_path)
+        
+        # Also update the main RL model for general use
+        agent.save_model('ml_models/models/pit_strategy_rl.pkl')
+        
+        # Save training insights
+        insights_path = f'ml_models/models/training_insights_{track.lower()}_race{race_number}.json'
+        with open(insights_path, 'w') as f:
+            json.dump(training_results, f, indent=2, default=str)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Intelligent strategy model trained for {track} (Race #{race_number})',
+            'training_methodology': 'Real F1 Team Approach',
+            'scenarios_trained': training_results['scenarios_trained'],
+            'total_episodes': training_results['overall_performance']['total_episodes'],
+            'track_insights': {
+                'optimal_pit_window': training_results['track_specific_insights']['optimal_pit_window'],
+                'average_pit_stops': round(training_results['track_specific_insights']['average_pit_stops'], 1),
+                'fastest_strategy_time': round(training_results['track_specific_insights']['fastest_strategy_time'], 1),
+                'compound_preferences': training_results['track_specific_insights']['most_common_compounds']
+            },
+            'season_context': {
+                'race_number': race_number,
+                'championship_pressure': round(race_number / 24.0, 2),
+                'development_phase': trainer.get_current_season_context(race_number)['development_phase']
+            },
+            'model_paths': {
+                'intelligent_model': model_path,
+                'general_model': 'ml_models/models/pit_strategy_rl.pkl',
+                'insights': insights_path
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in intelligent training: {e}")
+        return jsonify({'error': str(e)}), 500

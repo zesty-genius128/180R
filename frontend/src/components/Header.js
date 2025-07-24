@@ -122,6 +122,12 @@ const Header = ({
           >
             🧠 AI Strategy
           </Link>
+          <Link 
+            to="/intelligent-training" 
+            className={`nav-link ${isActivePage('/intelligent-training') ? 'nav-link-active' : 'nav-link-special'}`}
+          >
+            🏋️ Smart Training
+          </Link>
         </nav>
 
         {/* Controls */}
