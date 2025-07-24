@@ -337,8 +337,8 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🏁 180R MCP Server running on port ${PORT}`);
-  console.log(`📡 OpenF1 API integration active`);
-  console.log(`🔧 MCP tools available: ${tools.length}`);
-  console.log(`🏎️  Named after the famous 180-degree F1 corners`);
+  console.log(`180R MCP Server running on port ${PORT}`);
+  console.log(`OpenF1 API integration active`);
+  console.log(`MCP tools available: ${tools.length}`);
+  console.log(`Named after the famous 180-degree F1 corners`);
 });
