@@ -8,14 +8,20 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@modelcontextprotocol/sdk": "^1.17.0",
     "axios": "^1.6.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["f1", "mcp", "racing", "live-data"],
+  "keywords": [
+    "f1",
+    "mcp",
+    "racing",
+    "live-data"
+  ],
   "author": "",
   "license": "MIT"
 }

@@ -280,6 +280,53 @@ async function getSessionResults(sessionKey) {
   };
 }
 
+// MCP-remote expects these endpoints
+app.post('/', (req, res) => {
+  // Handle initialize and other root MCP requests
+  if (req.body && req.body.method === 'initialize') {
+    res.json({
+      jsonrpc: '2.0',
+      id: req.body.id,
+      result: {
+        protocolVersion: '2025-06-18',
+        capabilities: {
+          tools: {}
+        },
+        serverInfo: {
+          name: '180R',
+          version: '1.0.0'
+        }
+      }
+    });
+  } else {
+    res.status(404).json({ error: 'Unsupported method' });
+  }
+});
+
+// SSE endpoint for mcp-remote
+app.get('/sse', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // Send initial event
+  res.write('event: message\n');
+  res.write('data: {"jsonrpc":"2.0","method":"initialized","params":{}}\n\n');
+
+  // Keep connection alive
+  const keepAlive = setInterval(() => {
+    res.write('data: {"jsonrpc":"2.0","method":"ping"}\n\n');
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ 

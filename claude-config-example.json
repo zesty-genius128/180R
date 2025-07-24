@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "180r": {
+      "command": "node",
+      "args": ["/Users/adityadamerla/Documents/GitHub/180R/mcp-server.js"],
+      "env": {}
+    }
+  }
+}
