@@ -8,6 +8,7 @@ Flask API endpoints for F1 strategy analysis and tire degradation predictions.
 from flask import Blueprint, request, jsonify
 from .tire_degradation import TireDegradationPredictor
 from .pit_strategy_rl import PitStrategyQLearning, F1RaceEnvironment
+from .intelligent_strategy_trainer import IntelligentF1StrategyTrainer
 import os
 import json
 from datetime import datetime

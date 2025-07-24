@@ -432,6 +432,25 @@ app.post('/api/ml/strategy-comparison', async (req, res) => {
   }
 });
 
+// === INTELLIGENT STRATEGY TRAINING API ROUTES ===
+
+// Train intelligent strategy model
+app.post('/api/ml/train-intelligent-strategy', async (req, res) => {
+  try {
+    console.log('🧠 Training intelligent strategy model...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/train-intelligent-strategy`, req.body, {
+      timeout: 600000 // 10 minutes for intelligent training
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error training intelligent strategy:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to train intelligent strategy',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
 // Helper function to determine current session
 function getCurrentSession(event) {
   const now = new Date();
