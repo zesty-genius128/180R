@@ -11,6 +11,7 @@ import Dashboard from './components/Dashboard';
 import ComparisonPage from './components/ComparisonPage';
 import SchedulePage from './components/SchedulePage';
 import TireStrategyAnalyzer from './components/TireStrategyAnalyzer';
+import IntelligentTraining from './components/IntelligentTraining';
 import WelcomeGuide from './components/WelcomeGuide';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -177,6 +178,10 @@ function App() {
               <Route 
                 path="/tire-strategy" 
                 element={<TireStrategyAnalyzer />} 
+              />
+              <Route 
+                path="/intelligent-training" 
+                element={<IntelligentTraining />} 
               />
             </Routes>
           </main>

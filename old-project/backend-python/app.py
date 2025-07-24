@@ -14,12 +14,14 @@ warnings.filterwarnings('ignore')
 
 # Import ML strategy engine
 from ml_models.strategy_engine import ml_blueprint
+from ml_models.intelligent_endpoints import intelligent_blueprint
 
 app = Flask(__name__)
 CORS(app)
 
-# Register ML Blueprint
+# Register ML Blueprints
 app.register_blueprint(ml_blueprint)
+app.register_blueprint(intelligent_blueprint)
 
 # OpenF1 API configuration
 OPENF1_BASE_URL = "https://api.openf1.org/v1"

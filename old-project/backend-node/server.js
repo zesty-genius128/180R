@@ -362,6 +362,95 @@ app.get('/api/live-timing', async (req, res) => {
   }
 });
 
+// === REINFORCEMENT LEARNING API ROUTES ===
+
+// Train RL strategy agent
+app.post('/api/ml/train-rl-strategy', async (req, res) => {
+  try {
+    console.log('🤖 Training RL strategy agent...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/train-rl-strategy`, req.body, {
+      timeout: 300000 // 5 minutes for RL training
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error training RL strategy:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to train RL strategy',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
+// Get RL strategy prediction
+app.post('/api/ml/rl-strategy-prediction', async (req, res) => {
+  try {
+    console.log('🔮 Getting RL strategy prediction...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/rl-strategy-prediction`, req.body, {
+      timeout: 30000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error getting RL prediction:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to get RL strategy prediction',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
+// Get RL model status
+app.get('/api/ml/rl-model-status', async (req, res) => {
+  try {
+    console.log('📊 Fetching RL model status...');
+    const response = await axios.get(`${PYTHON_API_URL}/api/ml/rl-model-status`, {
+      timeout: 10000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error fetching RL model status:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch RL model status',
+      message: error.message 
+    });
+  }
+});
+
+// Compare RL vs traditional strategies
+app.post('/api/ml/strategy-comparison', async (req, res) => {
+  try {
+    console.log('⚔️ Comparing strategies...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/strategy-comparison`, req.body, {
+      timeout: 30000
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error comparing strategies:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to compare strategies',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
+// === INTELLIGENT STRATEGY TRAINING API ROUTES ===
+
+// Train intelligent strategy model
+app.post('/api/ml/train-intelligent-strategy', async (req, res) => {
+  try {
+    console.log('🧠 Training intelligent strategy model...');
+    const response = await axios.post(`${PYTHON_API_URL}/api/ml/train-intelligent-strategy`, req.body, {
+      timeout: 600000 // 10 minutes for intelligent training
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('❌ Error training intelligent strategy:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to train intelligent strategy',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
 // Helper function to determine current session
 function getCurrentSession(event) {
   const now = new Date();
