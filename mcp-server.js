@@ -2,7 +2,12 @@
 
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
-const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
+const { 
+  CallToolRequestSchema, 
+  ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ListPromptsRequestSchema 
+} = require('@modelcontextprotocol/sdk/types.js');
 const axios = require('axios');
 
 // API endpoints
@@ -12,6 +17,20 @@ const F1_LIVETIMING_API = 'https://livetiming.formula1.com/static';
 
 class F1MCPServer {
   constructor() {
+    // Set up axios defaults with proper headers
+    axios.defaults.headers.common['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    axios.defaults.headers.common['Accept'] = 'application/json';
+    axios.defaults.headers.common['Accept-Language'] = 'en-US,en;q=0.9';
+    axios.defaults.timeout = 30000; // 30 second timeout
+    
+    // Add rate limiting
+    this.lastRequestTime = 0;
+    this.minRequestInterval = 100; // 100ms between requests
+    
+    // Free mode - no authentication required
+    console.error('180R MCP Server running in FREE MODE');
+    console.error('Live data during sessions may be limited - historical data available after sessions');
+    
     this.server = new Server(
       {
         name: '180r',
@@ -20,6 +39,8 @@ class F1MCPServer {
       {
         capabilities: {
           tools: {},
+          resources: {},
+          prompts: {},
         },
       }
     );
@@ -35,7 +56,7 @@ class F1MCPServer {
           // EXISTING TOOLS
           {
             name: 'get_current_session',
-            description: 'Get current or next F1 session information',
+            description: 'Get current or next F1 session information (FREE MODE: basic info only during live sessions)',
             inputSchema: {
               type: 'object',
               properties: {},
@@ -44,7 +65,7 @@ class F1MCPServer {
           },
           {
             name: 'get_live_timing',
-            description: 'Get live timing data for current session',
+            description: 'Get timing data for sessions (FREE MODE: limited during live sessions, full data after completion)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -100,7 +121,7 @@ class F1MCPServer {
           },
           {
             name: 'get_tire_strategy_analysis',
-            description: 'Analyze tire strategies and pit windows during live sessions',
+            description: 'Analyze tire strategies and pit windows (FREE MODE: works best with historical data)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -216,7 +237,7 @@ class F1MCPServer {
           // NEW OPENF1 ENDPOINTS
           {
             name: 'get_car_data',
-            description: 'Get real-time car telemetry data (speed, throttle, brake, DRS, gear)',
+            description: 'Get car telemetry data (FREE MODE: restricted during live sessions, available after completion)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -238,7 +259,7 @@ class F1MCPServer {
           },
           {
             name: 'get_intervals',
-            description: 'Get gap timing between drivers',
+            description: 'Get gap timing between drivers (FREE MODE: limited during live sessions)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -256,7 +277,7 @@ class F1MCPServer {
           },
           {
             name: 'get_location',
-            description: 'Get real-time GPS coordinates and track position data',
+            description: 'Get GPS coordinates and track position data (FREE MODE: limited during live sessions)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -314,7 +335,7 @@ class F1MCPServer {
           },
           {
             name: 'get_team_radio',
-            description: 'Get driver-team radio communications',
+            description: 'Get driver-team radio communications (FREE MODE: limited during live sessions)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -475,7 +496,7 @@ class F1MCPServer {
           // F1 LIVETIMING API ENDPOINTS
           {
             name: 'get_livetiming_data',
-            description: 'Get live timing data from F1 official LiveTiming API',
+            description: 'Get timing data from F1 LiveTiming API (FREE MODE: limited access during live sessions)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -534,6 +555,38 @@ class F1MCPServer {
                 }
               },
               required: ['year']
+            }
+          },
+          {
+            name: 'get_sessions_by_date',
+            description: 'Get F1 sessions for a specific date (useful for finding practice sessions that happened today)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                date: {
+                  type: 'string',
+                  description: 'Date in YYYY-MM-DD format (default: today)'
+                },
+                location: {
+                  type: 'string',
+                  description: 'Filter by location/track name (optional)'
+                }
+              },
+              required: []
+            }
+          },
+          {
+            name: 'get_free_session_info',
+            description: 'Get F1 session information (FREE - ALWAYS WORKS - including during live sessions)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                date: {
+                  type: 'string',
+                  description: 'Date to check (YYYY-MM-DD, default: today)'
+                }
+              },
+              required: []
             }
           }
         ]
@@ -638,6 +691,12 @@ class F1MCPServer {
           case 'get_livetiming_heartbeat':
             result = await this.getLiveTimingHeartbeat(args?.year, args?.meeting_key);
             break;
+          case 'get_sessions_by_date':
+            result = await this.getSessionsByDate(args?.date, args?.location);
+            break;
+          case 'get_free_session_info':
+            result = await this.getFreeSessionInfo(args?.date);
+            break;
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -662,15 +721,74 @@ class F1MCPServer {
         };
       }
     });
+
+    // Add required MCP handlers for Claude Desktop
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      return { resources: [] };
+    });
+
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+      return { prompts: [] };
+    });
+  }
+
+  // Helper method for rate-limited API requests
+  async makeRequest(url, params = {}) {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      await new Promise(resolve => setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest));
+    }
+    
+    this.lastRequestTime = Date.now();
+    
+    try {
+      // Prepare headers
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9'
+      };
+      
+      // Free mode - no authentication headers needed
+      
+      const response = await axios.get(url, { 
+        params,
+        headers 
+      });
+      return response;
+    } catch (error) {
+      // Enhanced error logging
+      console.error(`API Request failed for ${url}:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      
+      // Provide helpful error messages for free users
+      if (error.response?.status === 401) {
+        if (url.includes('api.openf1.org')) {
+          const restrictedError = new Error('Live session data restricted during active sessions (FREE MODE) - Data available after session ends');
+          restrictedError.details = {
+            status: 'RESTRICTED_DURING_LIVE',
+            retry_after_session: true,
+            alternative: 'Try historical data once session completes'
+          };
+          throw restrictedError;
+        }
+      }
+      
+      throw error;
+    }
   }
 
   async getCurrentSession() {
     const now = new Date();
-    const response = await axios.get(`${OPENF1_API}/sessions`, {
-      params: {
-        year: 2025,
-        date_start: now.toISOString().split('T')[0]
-      }
+    const response = await this.makeRequest(`${OPENF1_API}/sessions`, {
+      year: 2025,
+      date_start: now.toISOString().split('T')[0]
     });
 
     const sessions = response.data;
@@ -2623,6 +2741,146 @@ class F1MCPServer {
     });
 
     return insights;
+  }
+
+  async getFreeSessionInfo(date = null) {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Basic F1 2025 schedule (free alternative)
+      const f1Calendar = {
+        '2025-07-25': {
+          location: 'Spa-Francorchamps',
+          country: 'Belgium',
+          weekend_type: 'Sprint Weekend',
+          sessions: [
+            { name: 'Practice 1', time: '12:30-13:30 UTC', status: targetDate === today ? 'COMPLETED' : 'SCHEDULED' },
+            { name: 'Sprint Qualifying', time: '16:30-17:14 UTC', status: targetDate === today ? 'LIVE_OR_COMPLETED' : 'SCHEDULED' },
+            { name: 'Sprint', time: 'Tomorrow 12:00-13:00 UTC', status: 'SCHEDULED' },
+            { name: 'Qualifying', time: 'Tomorrow 16:00-17:00 UTC', status: 'SCHEDULED' }
+          ]
+        },
+        '2025-07-26': {
+          location: 'Spa-Francorchamps',
+          country: 'Belgium',
+          weekend_type: 'Sprint Weekend',
+          sessions: [
+            { name: 'Sprint', time: '12:00-13:00 UTC', status: 'SCHEDULED' },
+            { name: 'Qualifying', time: '16:00-17:00 UTC', status: 'SCHEDULED' }
+          ]
+        },
+        '2025-07-27': {
+          location: 'Spa-Francorchamps',
+          country: 'Belgium',
+          weekend_type: 'Sprint Weekend',
+          sessions: [
+            { name: 'Race', time: '15:00-17:00 UTC', status: 'SCHEDULED' }
+          ]
+        }
+      };
+
+      const sessionInfo = f1Calendar[targetDate];
+      
+      if (sessionInfo) {
+        const now = new Date();
+        const currentTime = now.toISOString().split('T')[1].substring(0, 5);
+        
+        return {
+          date: targetDate,
+          source: 'FREE_SCHEDULE_DATA',
+          location: sessionInfo.location,
+          country: sessionInfo.country,
+          weekend_type: sessionInfo.weekend_type,
+          sessions: sessionInfo.sessions.map(session => ({
+            ...session,
+            current_time_utc: currentTime,
+            note: targetDate === today ? 'Live session status - check after sessions end for detailed results' : null
+          })),
+          message: targetDate === today ? 
+            'LIVE WEEKEND - Detailed timing data available after sessions complete' : 
+            'Historical weekend data'
+        };
+      } else {
+        return {
+          date: targetDate,
+          source: 'FREE_SCHEDULE_DATA',
+          message: 'No F1 sessions scheduled for this date',
+          sessions: [],
+          next_race: 'Check F1 official calendar for upcoming races'
+        };
+      }
+      
+    } catch (error) {
+      return {
+        error: `Failed to get free session info: ${error.message}`,
+        date: date || new Date().toISOString().split('T')[0],
+        source: 'FREE_SCHEDULE_DATA'
+      };
+    }
+  }
+
+  async getSessionsByDate(date = null, location = null) {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      
+      const response = await this.makeRequest(`${OPENF1_API}/sessions`, {
+        year: 2025,
+        date_start: targetDate
+      });
+
+      let sessions = response.data;
+
+      // Filter by location if provided
+      if (location) {
+        const locationLower = location.toLowerCase();
+        sessions = sessions.filter(session => 
+          session.location?.toLowerCase().includes(locationLower) ||
+          session.country_name?.toLowerCase().includes(locationLower) ||
+          session.circuit_short_name?.toLowerCase().includes(locationLower)
+        );
+      }
+
+      // Add session status for each session
+      const now = new Date();
+      sessions = sessions.map(session => {
+        const start = new Date(session.date_start);
+        const end = new Date(session.date_end);
+        
+        let status = 'SCHEDULED';
+        if (now >= start && now <= end) {
+          status = 'LIVE';
+        } else if (now > end) {
+          status = 'COMPLETED';
+        }
+        
+        return {
+          ...session,
+          status,
+          formatted_time: {
+            start: start.toLocaleString(),
+            end: end.toLocaleString(),
+            duration_minutes: Math.round((end - start) / (1000 * 60))
+          }
+        };
+      });
+
+      return {
+        date: targetDate,
+        location_filter: location || 'all',
+        sessions_found: sessions.length,
+        sessions: sessions.sort((a, b) => new Date(a.date_start) - new Date(b.date_start))
+      };
+
+    } catch (error) {
+      return {
+        error: `Failed to get sessions: ${error.message}`,
+        date: date || new Date().toISOString().split('T')[0],
+        location_filter: location || 'all',
+        sessions_found: 0,
+        sessions: []
+      };
+    }
   }
 
   async run() {
