@@ -1,6 +1,6 @@
 # 180R
 
-> *"Because every F1 nerd deserves access to the same data that costs Mercedes millions."*
+> *"Because every F1 nerd deserves access to the same data that costs Mercedes millions, right?"*
 
 A comprehensive Formula 1 MCP (Model Context Protocol) server that delivers **complete F1 intelligence** with the precision of a Swiss chronometer and the speed of a DRS overtake. Named after those infamous 180-degree hairpin corners that separate the wheat from the chaff in F1 strategy.
 
@@ -10,31 +10,34 @@ While other F1 apps give you pretty graphics and basic timings, 180R gives you t
 
 ### Complete Data Coverage
 
-**🔴 Real-Time Race Intelligence (OpenF1 API)**
-- Live session status and timing data
-- Real-time car telemetry (speed, throttle, brake, DRS, gear, RPM)
-- GPS coordinates and track positioning
-- Gap analysis and interval timing
-- Pit stop data and timing
-- Race control messages and flags
-- Team radio communications
-- Weather conditions and strategic implications
+**FREE MODE OPERATION**
+This server operates in **FREE MODE** using public API endpoints. During live F1 sessions, some APIs require paid authentication for real-time data, but 180R provides honest fallbacks and reliable historical/schedule data that always works.
 
-**🏛️ Historical F1 Database (Ergast API)**
-- Complete circuit database with track details
-- Constructor/team information and history
-- Driver databases across all F1 eras
-- Race results from 1950 to present
-- Qualifying results and grid positions
-- Championship standings (drivers & constructors)
+**Real-Time Race Intelligence (OpenF1 API - FREE MODE)**
+- Live session status and timing data *(limited during active sessions)*
+- Real-time car telemetry (speed, throttle, brake, DRS, gear, RPM) *(limited during active sessions)*
+- GPS coordinates and track positioning *(limited during active sessions)*
+- Gap analysis and interval timing *(limited during active sessions)*
+- Pit stop data and timing *(limited during active sessions)*
+- Race control messages and flags *(limited during active sessions)*
+- Team radio communications *(limited during active sessions)*
+- Weather conditions and strategic implications *(limited during active sessions)*
 
-**⚡ Official F1 Live Data (F1 LiveTiming API)**
-- Official timing streams during live sessions
-- Archive data from past events
-- Multi-format data types (21 different streams)
-- Session heartbeat and status monitoring
+**Historical F1 Database (Ergast API)**
+- Complete circuit database with track details *(FREE MODE: always works)*
+- Constructor/team information and history *(FREE MODE: always works)*
+- Driver databases across all F1 eras *(FREE MODE: always works)*
+- Race results from 1950 to present *(FREE MODE: always works)*
+- Qualifying results and grid positions *(FREE MODE: always works)*
+- Championship standings (drivers & constructors) *(FREE MODE: always works)*
 
-**🧠 Strategic Analysis Engine**
+**Official F1 Live Data (F1 LiveTiming API - FREE MODE)**
+- Official timing streams during live sessions *(limited during active sessions)*
+- Archive data from past events *(reliable access)*
+- Multi-format data types (21 different streams) *(limited during active sessions)*
+- Session heartbeat and status monitoring *(limited during active sessions)*
+
+**Strategic Analysis Engine**
 - Tire strategy deep-dives that would make Pirelli engineers weep
 - Sector performance analysis with theoretical best laps
 - Championship scenarios and points mathematics
@@ -51,53 +54,56 @@ npm install
 node mcp-server.js
 ```
 
-## Complete MCP Tools Arsenal - 29 Endpoints
+## Complete MCP Tools Arsenal - 30 Endpoints
 
-### 🔴 **OpenF1 Real-Time Data (12 endpoints)**
+**FREE MODE DISCLAIMER**: All tools marked with *(FREE MODE: limited during live sessions)* may have reduced functionality during active F1 sessions due to API authentication requirements. Historical data and F1 schedules always work reliably.
+
+### **OpenF1 Real-Time Data (14 endpoints)**
 
 #### Core Session Intelligence
-- **`get_current_session`** - Live session status and next session timing
-- **`get_live_timing`** - Real-time position and lap data
-- **`get_session_results`** - Complete session results with driver info
-- **`get_race_schedule`** - F1 calendar with proper Grand Prix names
+- **`get_current_session`** - Live session status and next session timing *(FREE MODE: limited during live sessions)*
+- **`get_live_timing`** - Real-time position and lap data *(FREE MODE: limited during live sessions)*
+- **`get_session_results`** - Complete session results with driver info *(FREE MODE: limited during live sessions)*
+- **`get_race_schedule`** - F1 calendar with proper Grand Prix names *(FREE MODE: always works)*
+- **`get_sessions_by_date`** - Get F1 sessions for specific dates *(FREE MODE: always works)*
+- **`get_free_session_info`** - Reliable F1 session info with schedule *(FREE MODE: always works)*
 
 #### Real-Time Telemetry & Positioning  
-- **`get_car_data`** - Live telemetry (speed, throttle, brake, DRS, gear, RPM)
-- **`get_location`** - GPS coordinates and 3D track positioning
-- **`get_intervals`** - Gap timing and position analysis
-- **`get_pit_data`** - Pit stop timing and strategy data
+- **`get_car_data`** - Live telemetry (speed, throttle, brake, DRS, gear, RPM) *(FREE MODE: limited during live sessions)*
+- **`get_location`** - GPS coordinates and 3D track positioning *(FREE MODE: limited during live sessions)*
+- **`get_intervals`** - Gap timing and position analysis *(FREE MODE: limited during live sessions)*
+- **`get_pit_data`** - Pit stop timing and strategy data *(FREE MODE: limited during live sessions)*
 
 #### Race Intelligence
-- **`get_race_control`** - Race director messages, flags, and safety info
-- **`get_team_radio`** - Driver-team radio communications
-- **`get_session_result_beta`** - Official session results (beta)
-- **`get_starting_grid_beta`** - Grid positions (beta)
+- **`get_race_control`** - Race director messages, flags, and safety info *(FREE MODE: limited during live sessions)*
+- **`get_team_radio`** - Driver-team radio communications *(FREE MODE: limited during live sessions)*
+- **`get_session_result_beta`** - Official session results (beta) *(FREE MODE: limited during live sessions)*
+- **`get_starting_grid_beta`** - Grid positions (beta) *(FREE MODE: limited during live sessions)*
 
-### 🏛️ **Ergast Historical Database (6 endpoints)**
+### **Ergast Historical Database (6 endpoints)**
 
-- **`get_ergast_circuits`** - Complete circuit database from F1 history
-- **`get_ergast_constructors`** - Team/constructor information across eras
-- **`get_ergast_drivers`** - Driver database from 1950 to present
-- **`get_ergast_results`** - Race results with full historical data
-- **`get_ergast_qualifying`** - Qualifying results and grid analysis
-- **`get_ergast_standings`** - Championship standings (drivers & constructors)
+- **`get_ergast_circuits`** - Complete circuit database from F1 history *(FREE MODE: always works)*
+- **`get_ergast_constructors`** - Team/constructor information across eras *(FREE MODE: always works)*
+- **`get_ergast_drivers`** - Driver database from 1950 to present *(FREE MODE: always works)*
+- **`get_ergast_results`** - Race results with full historical data *(FREE MODE: always works)*
+- **`get_ergast_qualifying`** - Qualifying results and grid analysis *(FREE MODE: always works)*
+- **`get_ergast_standings`** - Championship standings (drivers & constructors) *(FREE MODE: always works)*
 
-### ⚡ **F1 LiveTiming Official Data (3 endpoints)**
+### **F1 LiveTiming Official Data (3 endpoints)**
 
-- **`get_livetiming_data`** - 21 official data streams (timing, positions, etc.)
-- **`get_livetiming_session_info`** - Official session information
-- **`get_livetiming_heartbeat`** - Live session status monitoring
+- **`get_livetiming_data`** - 21 official data streams (timing, positions, etc.) *(FREE MODE: limited during live sessions)*
+- **`get_livetiming_session_info`** - Official session information *(FREE MODE: limited during live sessions)*
+- **`get_livetiming_heartbeat`** - Live session status monitoring *(FREE MODE: limited during live sessions)*
 
-### 🧠 **Strategic Analysis Engine (8 endpoints)**
+### **Strategic Analysis Engine (7 endpoints)**
 
-- **`get_driver_standings`** - Championship standings with points mathematics
-- **`get_tire_strategy_analysis`** - Pit strategy analysis and compound usage
-- **`get_sector_performance`** - Sector times and theoretical best laps
-- **`get_championship_implications`** - "What if" scenarios and points calculations
-- **`get_weather_impact_analysis`** - Weather conditions and strategic implications
-- **`get_current_car_performance`** - Team performance trends and development
-- **`get_tire_compound_analysis`** - Tire performance and degradation analysis
-- **`get_driver_form_analysis`** - Driver performance trends and consistency
+- **`get_driver_standings`** - Championship standings with points mathematics *(FREE MODE: always works)*
+- **`get_tire_strategy_analysis`** - Pit strategy analysis and compound usage *(FREE MODE: limited during live sessions)*
+- **`get_sector_performance`** - Sector times and theoretical best laps *(FREE MODE: limited during live sessions)*
+- **`get_championship_implications`** - "What if" scenarios and points calculations *(FREE MODE: always works)*
+- **`get_weather_impact_analysis`** - Weather conditions and strategic implications *(FREE MODE: limited during live sessions)*
+- **`get_current_car_performance`** - Team performance trends and development *(FREE MODE: limited during live sessions)*
+- **`get_tire_compound_analysis`** - Tire performance and degradation analysis *(FREE MODE: limited during live sessions)*
 
 ## Example Data Quality
 
@@ -149,11 +155,11 @@ Add this to your Claude Desktop config and suddenly you're the most informed per
 
 ## Data Sources
 
-**🔴 [OpenF1 API](https://openf1.org)** - Real-time race data more accurate than FIA timing screens  
-**🏛️ [Ergast API](https://ergast.com/mrd/)** - Complete F1 historical database (1950-present)  
-**⚡ [F1 LiveTiming API](https://livetiming.formula1.com)** - Official F1 timing streams  
+**[OpenF1 API](https://openf1.org)** - Real-time race data (FREE MODE: limited during live sessions)  
+**[Ergast API](https://ergast.com/mrd/)** - Complete F1 historical database (FREE MODE: always works)  
+**[F1 LiveTiming API](https://livetiming.formula1.com)** - Official F1 timing streams (FREE MODE: limited during live sessions)  
 
-The triple-threat combination that gives you **complete F1 intelligence**.
+The triple-threat combination that gives you **complete F1 intelligence** in FREE MODE with honest limitations.
 
 ## Why "180R"?
 
@@ -194,9 +200,9 @@ Because being an F1 fan isn't just about cheering for your driver. It's about un
 - **Multi-source reliability** - Three different APIs ensure you always have data
 - **Real-time awareness** - Knows when sessions are live vs. archived
 
-### Current Status: **PRODUCTION READY** ✅
+### Current Status: **PRODUCTION READY**
 
-All 29 endpoints tested and optimized for real-world usage during live F1 sessions.
+All 30 endpoints tested and optimized for real-world usage. **FREE MODE** ensures reliable operation with honest limitations during live F1 sessions.
 
 ## License
 
