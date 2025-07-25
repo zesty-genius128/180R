@@ -2,7 +2,12 @@
 
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
-const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
+const { 
+  CallToolRequestSchema, 
+  ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ListPromptsRequestSchema 
+} = require('@modelcontextprotocol/sdk/types.js');
 const axios = require('axios');
 
 // API endpoints
@@ -20,6 +25,8 @@ class F1MCPServer {
       {
         capabilities: {
           tools: {},
+          resources: {},
+          prompts: {},
         },
       }
     );
@@ -535,6 +542,24 @@ class F1MCPServer {
               },
               required: ['year']
             }
+          },
+          {
+            name: 'get_sessions_by_date',
+            description: 'Get F1 sessions for a specific date (useful for finding practice sessions that happened today)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                date: {
+                  type: 'string',
+                  description: 'Date in YYYY-MM-DD format (default: today)'
+                },
+                location: {
+                  type: 'string',
+                  description: 'Filter by location/track name (optional)'
+                }
+              },
+              required: []
+            }
           }
         ]
       };
@@ -638,6 +663,9 @@ class F1MCPServer {
           case 'get_livetiming_heartbeat':
             result = await this.getLiveTimingHeartbeat(args?.year, args?.meeting_key);
             break;
+          case 'get_sessions_by_date':
+            result = await this.getSessionsByDate(args?.date, args?.location);
+            break;
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -661,6 +689,15 @@ class F1MCPServer {
           isError: true
         };
       }
+    });
+
+    // Add required MCP handlers for Claude Desktop
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      return { resources: [] };
+    });
+
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+      return { prompts: [] };
     });
   }
 
@@ -2623,6 +2660,71 @@ class F1MCPServer {
     });
 
     return insights;
+  }
+
+  async getSessionsByDate(date = null, location = null) {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      
+      const response = await axios.get(`${OPENF1_API}/sessions`, {
+        params: {
+          year: 2025,
+          date_start: targetDate
+        }
+      });
+
+      let sessions = response.data;
+
+      // Filter by location if provided
+      if (location) {
+        const locationLower = location.toLowerCase();
+        sessions = sessions.filter(session => 
+          session.location?.toLowerCase().includes(locationLower) ||
+          session.country_name?.toLowerCase().includes(locationLower) ||
+          session.circuit_short_name?.toLowerCase().includes(locationLower)
+        );
+      }
+
+      // Add session status for each session
+      const now = new Date();
+      sessions = sessions.map(session => {
+        const start = new Date(session.date_start);
+        const end = new Date(session.date_end);
+        
+        let status = 'SCHEDULED';
+        if (now >= start && now <= end) {
+          status = 'LIVE';
+        } else if (now > end) {
+          status = 'COMPLETED';
+        }
+        
+        return {
+          ...session,
+          status,
+          formatted_time: {
+            start: start.toLocaleString(),
+            end: end.toLocaleString(),
+            duration_minutes: Math.round((end - start) / (1000 * 60))
+          }
+        };
+      });
+
+      return {
+        date: targetDate,
+        location_filter: location || 'all',
+        sessions_found: sessions.length,
+        sessions: sessions.sort((a, b) => new Date(a.date_start) - new Date(b.date_start))
+      };
+
+    } catch (error) {
+      return {
+        error: `Failed to get sessions: ${error.message}`,
+        date: date || new Date().toISOString().split('T')[0],
+        location_filter: location || 'all',
+        sessions_found: 0,
+        sessions: []
+      };
+    }
   }
 
   async run() {
