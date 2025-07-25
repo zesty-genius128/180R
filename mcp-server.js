@@ -1110,10 +1110,29 @@ class F1MCPServer {
       const params = { session_key: sessionKey };
       if (driverNumber) params.driver_number = driverNumber;
       
-      const response = await axios.get(`${OPENF1_API}/car_data`, { params });
+      const response = await axios.get(`${OPENF1_API}/car_data`, { 
+        params,
+        timeout: 15000
+      });
       let carData = response.data;
 
-      if (latestOnly && carData.length > 0) {
+      // Always limit car data as it can be extremely large
+      if (carData.length > 1000) {
+        if (latestOnly) {
+          // Group by driver and get latest data point for each
+          const latestByDriver = {};
+          carData.forEach(data => {
+            const driver = data.driver_number;
+            if (!latestByDriver[driver] || new Date(data.date) > new Date(latestByDriver[driver].date)) {
+              latestByDriver[driver] = data;
+            }
+          });
+          carData = Object.values(latestByDriver);
+        } else {
+          // If not latest only, take most recent 1000 entries
+          carData = carData.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 1000);
+        }
+      } else if (latestOnly && carData.length > 0) {
         // Group by driver and get latest data point for each
         const latestByDriver = {};
         carData.forEach(data => {
@@ -1127,9 +1146,10 @@ class F1MCPServer {
 
       return {
         session_key: sessionKey,
-        car_data: carData,
+        car_data: carData.slice(0, 500), // Final safety limit
         data_points: carData.length,
         drivers_count: new Set(carData.map(d => d.driver_number)).size,
+        data_limited: response.data.length > carData.length,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
@@ -1142,17 +1162,67 @@ class F1MCPServer {
       const params = { session_key: sessionKey };
       if (driverNumber) params.driver_number = driverNumber;
       
-      const response = await axios.get(`${OPENF1_API}/intervals`, { params });
-      const intervals = response.data;
+      const response = await axios.get(`${OPENF1_API}/intervals`, { 
+        params,
+        timeout: 15000 // 15 second timeout
+      });
+      let intervals = response.data;
+      const originalLength = intervals.length;
 
-      // Analyze gap trends
+      // Smart data limiting that preserves race progression
+      if (intervals.length > 800) {
+        if (driverNumber) {
+          // For single driver: keep all data (it's already filtered)
+          intervals = intervals.slice(0, 800); // Just safety limit
+        } else {
+          // For all drivers: intelligent sampling to preserve race story
+          const driverIntervals = {};
+          intervals.forEach(interval => {
+            const driver = interval.driver_number;
+            if (!driverIntervals[driver]) {
+              driverIntervals[driver] = [];
+            }
+            driverIntervals[driver].push(interval);
+          });
+
+          // Smart sampling: keep key moments + recent data
+          Object.keys(driverIntervals).forEach(driver => {
+            const driverData = driverIntervals[driver].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            if (driverData.length > 50) {
+              // Keep: race start (first 10), key moments (every 5th), recent data (last 20)
+              const sampled = [
+                ...driverData.slice(0, 10), // Race start
+                ...driverData.filter((_, i) => i % 5 === 0 && i > 10 && i < driverData.length - 20), // Key moments
+                ...driverData.slice(-20) // Recent data
+              ];
+              driverIntervals[driver] = sampled;
+            }
+          });
+
+          intervals = Object.values(driverIntervals).flat();
+        }
+      }
+
+      // Analyze gap trends on processed data
       const gapAnalysis = this.analyzeGapTrends(intervals);
+      
+      // Enhanced response with better data insights
+      const driverCount = new Set(intervals.map(i => i.driver_number)).size;
+      const avgDataPerDriver = intervals.length / driverCount;
       
       return {
         session_key: sessionKey,
-        intervals: intervals,
+        intervals: intervals.slice(0, 800), // Final safety limit
         gap_analysis: gapAnalysis,
-        total_data_points: intervals.length,
+        data_summary: {
+          total_original: originalLength,
+          total_returned: Math.min(intervals.length, 800),
+          drivers_covered: driverCount,
+          avg_points_per_driver: Math.round(avgDataPerDriver),
+          data_limited: originalLength > intervals.length,
+          sampling_strategy: driverNumber ? 'single_driver_full' : 'intelligent_multi_driver'
+        },
         timestamp: new Date().toISOString()
       };
     } catch (error) {
@@ -1165,10 +1235,29 @@ class F1MCPServer {
       const params = { session_key: sessionKey };
       if (driverNumber) params.driver_number = driverNumber;
       
-      const response = await axios.get(`${OPENF1_API}/location`, { params });
+      const response = await axios.get(`${OPENF1_API}/location`, { 
+        params,
+        timeout: 15000
+      });
       let locationData = response.data;
 
-      if (latestOnly && locationData.length > 0) {
+      // Limit location data as it can be extremely large
+      if (locationData.length > 2000) {
+        if (latestOnly) {
+          // Get latest position for each driver
+          const latestByDriver = {};
+          locationData.forEach(loc => {
+            const driver = loc.driver_number;
+            if (!latestByDriver[driver] || new Date(loc.date) > new Date(latestByDriver[driver].date)) {
+              latestByDriver[driver] = loc;
+            }
+          });
+          locationData = Object.values(latestByDriver);
+        } else {
+          // Take most recent 2000 entries
+          locationData = locationData.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 2000);
+        }
+      } else if (latestOnly && locationData.length > 0) {
         // Get latest position for each driver
         const latestByDriver = {};
         locationData.forEach(loc => {
@@ -1182,9 +1271,10 @@ class F1MCPServer {
 
       return {
         session_key: sessionKey,
-        location_data: locationData,
+        location_data: locationData.slice(0, 1000), // Final safety limit
         track_coverage: this.analyzeTrackCoverage(locationData),
         data_points: locationData.length,
+        data_limited: response.data.length > locationData.length,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
@@ -1246,8 +1336,16 @@ class F1MCPServer {
       const params = { session_key: sessionKey };
       if (driverNumber) params.driver_number = driverNumber;
       
-      const response = await axios.get(`${OPENF1_API}/team_radio`, { params });
-      const teamRadio = response.data;
+      const response = await axios.get(`${OPENF1_API}/team_radio`, { 
+        params,
+        timeout: 15000
+      });
+      let teamRadio = response.data;
+
+      // Limit team radio data (keep most recent 200 transmissions)
+      if (teamRadio.length > 200) {
+        teamRadio = teamRadio.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 200);
+      }
 
       // Analyze radio frequency and topics
       const radioAnalysis = this.analyzeTeamRadio(teamRadio);
@@ -1258,6 +1356,7 @@ class F1MCPServer {
         radio_analysis: radioAnalysis,
         total_transmissions: teamRadio.length,
         drivers_active: new Set(teamRadio.map(r => r.driver_number)).size,
+        data_limited: response.data.length > teamRadio.length,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
@@ -1299,7 +1398,7 @@ class F1MCPServer {
     }
   }
 
-  // ERGAST API ENDPOINTS
+  // ERGAST API ENDPOINTS (with aggressive timeout and fallback handling)
   async getErgastCircuits(year = null, circuitId = null) {
     try {
       let url = `${ERGAST_API}`;
@@ -1308,18 +1407,45 @@ class F1MCPServer {
       if (circuitId) url += `/${circuitId}`;
       url += '.json';
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 8000, // Reduced timeout - Ergast is often slow
+        headers: { 
+          'User-Agent': '180R-F1-Dashboard/1.0',
+          'Accept': 'application/json'
+        }
+      });
       const circuits = response.data.MRData.CircuitTable.Circuits;
       
       return {
-        circuits,
+        circuits: circuits.slice(0, 30), // Further reduced limit  
         total_circuits: circuits.length,
         year: year || 'all',
         source: 'Ergast API',
+        api_status: 'online',
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      throw new Error(`Ergast circuits data retrieval failed: ${error.message}`);
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return {
+          circuits: [],
+          total_circuits: 0,
+          year: year || 'all',
+          source: 'Ergast API',
+          api_status: 'timeout',
+          error_message: 'Ergast API is currently slow/unavailable. This is common for the free tier.',
+          fallback_suggestion: 'Try OpenF1 API endpoints for current season data',
+          timestamp: new Date().toISOString()
+        };
+      }
+      return {
+        circuits: [],
+        total_circuits: 0,
+        year: year || 'all',
+        source: 'Ergast API',
+        api_status: 'error',
+        error_message: `API Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
@@ -1331,18 +1457,45 @@ class F1MCPServer {
       if (constructorId) url += `/${constructorId}`;
       url += '.json';
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 8000,
+        headers: { 
+          'User-Agent': '180R-F1-Dashboard/1.0',
+          'Accept': 'application/json'
+        }
+      });
       const constructors = response.data.MRData.ConstructorTable.Constructors;
       
       return {
-        constructors,
+        constructors: constructors.slice(0, 30),
         total_constructors: constructors.length,
         year: year || 'all',
         source: 'Ergast API',
+        api_status: 'online',
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      throw new Error(`Ergast constructors data retrieval failed: ${error.message}`);
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return {
+          constructors: [],
+          total_constructors: 0,
+          year: year || 'all',
+          source: 'Ergast API',
+          api_status: 'timeout',
+          error_message: 'Ergast API is currently slow/unavailable. This is common for the free tier.',
+          fallback_suggestion: 'Try OpenF1 API endpoints for current season data',
+          timestamp: new Date().toISOString()
+        };
+      }
+      return {
+        constructors: [],
+        total_constructors: 0,
+        year: year || 'all',
+        source: 'Ergast API',
+        api_status: 'error',
+        error_message: `API Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
@@ -1354,18 +1507,45 @@ class F1MCPServer {
       if (driverId) url += `/${driverId}`;
       url += '.json';
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 8000,
+        headers: { 
+          'User-Agent': '180R-F1-Dashboard/1.0',
+          'Accept': 'application/json'
+        }
+      });
       const drivers = response.data.MRData.DriverTable.Drivers;
       
       return {
-        drivers,
+        drivers: drivers.slice(0, 50),
         total_drivers: drivers.length,
         year: year || 'all',
         source: 'Ergast API',
+        api_status: 'online',
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      throw new Error(`Ergast drivers data retrieval failed: ${error.message}`);
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return {
+          drivers: [],
+          total_drivers: 0,
+          year: year || 'all',
+          source: 'Ergast API',
+          api_status: 'timeout',
+          error_message: 'Ergast API is currently slow/unavailable. This is common for the free tier.',
+          fallback_suggestion: 'Try OpenF1 API endpoints for current season data',
+          timestamp: new Date().toISOString()
+        };
+      }
+      return {
+        drivers: [],
+        total_drivers: 0,
+        year: year || 'all',
+        source: 'Ergast API',
+        api_status: 'error',
+        error_message: `API Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
@@ -1375,19 +1555,55 @@ class F1MCPServer {
       if (round) url += `/${round}`;
       url += '/results.json';
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 8000,
+        headers: { 
+          'User-Agent': '180R-F1-Dashboard/1.0',
+          'Accept': 'application/json'
+        }
+      });
       const races = response.data.MRData.RaceTable.Races;
       
+      // Limit races to prevent oversized responses
+      const limitedRaces = races.slice(0, 15).map(race => ({
+        ...race,
+        Results: race.Results ? race.Results.slice(0, 25) : [] // Limit results per race
+      }));
+      
       return {
-        races,
+        races: limitedRaces,
         total_races: races.length,
         year,
         round: round || 'all',
         source: 'Ergast API',
+        api_status: 'online',
+        data_limited: races.length > 15,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      throw new Error(`Ergast results data retrieval failed: ${error.message}`);
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return {
+          races: [],
+          total_races: 0,
+          year,
+          round: round || 'all',
+          source: 'Ergast API',
+          api_status: 'timeout',
+          error_message: 'Ergast API is currently slow/unavailable. This is common for the free tier.',
+          fallback_suggestion: 'Try OpenF1 API endpoints for current season data',
+          timestamp: new Date().toISOString()
+        };
+      }
+      return {
+        races: [],
+        total_races: 0,
+        year,
+        round: round || 'all',
+        source: 'Ergast API',
+        api_status: 'error',
+        error_message: `API Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
@@ -1397,19 +1613,55 @@ class F1MCPServer {
       if (round) url += `/${round}`;
       url += '/qualifying.json';
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 8000,
+        headers: { 
+          'User-Agent': '180R-F1-Dashboard/1.0',
+          'Accept': 'application/json'
+        }
+      });
       const races = response.data.MRData.RaceTable.Races;
       
+      // Limit races to prevent oversized responses
+      const limitedRaces = races.slice(0, 15).map(race => ({
+        ...race,
+        QualifyingResults: race.QualifyingResults ? race.QualifyingResults.slice(0, 25) : []
+      }));
+      
       return {
-        races,
+        races: limitedRaces,
         total_races: races.length,
         year,
         round: round || 'all',
         source: 'Ergast API',
+        api_status: 'online',
+        data_limited: races.length > 15,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      throw new Error(`Ergast qualifying data retrieval failed: ${error.message}`);
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return {
+          races: [],
+          total_races: 0,
+          year,
+          round: round || 'all',
+          source: 'Ergast API',
+          api_status: 'timeout',
+          error_message: 'Ergast API is currently slow/unavailable. This is common for the free tier.',
+          fallback_suggestion: 'Try OpenF1 API endpoints for current season data',
+          timestamp: new Date().toISOString()
+        };
+      }
+      return {
+        races: [],
+        total_races: 0,
+        year,
+        round: round || 'all',
+        source: 'Ergast API',
+        api_status: 'error',
+        error_message: `API Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
@@ -1419,22 +1671,53 @@ class F1MCPServer {
       if (round) url += `/${round}`;
       url += `/${type}Standings.json`;
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 8000,
+        headers: { 
+          'User-Agent': '180R-F1-Dashboard/1.0',
+          'Accept': 'application/json'
+        }
+      });
       const standingsTable = type === 'drivers' ? 
         response.data.MRData.StandingsTable.StandingsLists[0].DriverStandings :
         response.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings;
       
       return {
-        standings: standingsTable,
+        standings: standingsTable.slice(0, 30),
         type,
         year,
         round: round || 'current',
         total_entries: standingsTable.length,
         source: 'Ergast API',
+        api_status: 'online',
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      throw new Error(`Ergast standings data retrieval failed: ${error.message}`);
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return {
+          standings: [],
+          type,
+          year,
+          round: round || 'current',
+          total_entries: 0,
+          source: 'Ergast API',
+          api_status: 'timeout',
+          error_message: 'Ergast API is currently slow/unavailable. This is common for the free tier.',
+          fallback_suggestion: 'Try OpenF1 API endpoints for current season data',
+          timestamp: new Date().toISOString()
+        };
+      }
+      return {
+        standings: [],
+        type,
+        year,
+        round: round || 'current',
+        total_entries: 0,
+        source: 'Ergast API',
+        api_status: 'error',
+        error_message: `API Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
@@ -1446,18 +1729,32 @@ class F1MCPServer {
       if (sessionKey) url += `/${sessionKey}`;
       url += `/${dataType}.json`;
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 30000, // LiveTiming can be slow
+        headers: { 'User-Agent': '180R-F1-Dashboard/1.0' }
+      });
+      
+      let data = response.data;
+      
+      // Limit large data responses
+      if (typeof data === 'object' && Array.isArray(data) && data.length > 1000) {
+        data = data.slice(0, 1000);
+      }
       
       return {
-        data: response.data,
+        data: data,
         data_type: dataType,
         year,
         meeting_key: meetingKey,
         session_key: sessionKey,
         source: 'F1 LiveTiming API',
+        data_limited: Array.isArray(response.data) && response.data.length > 1000,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
+      if (error.code === 'ECONNABORTED') {
+        throw new Error(`F1 LiveTiming API timeout - try again later`);
+      }
       throw new Error(`LiveTiming data retrieval failed: ${error.message}`);
     }
   }
@@ -1468,7 +1765,13 @@ class F1MCPServer {
       if (meetingKey) url += `/${meetingKey}`;
       url += '/SessionInfo.json';
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 8000,
+        headers: { 
+          'User-Agent': '180R-F1-Dashboard/1.0',
+          'Accept': 'application/json'
+        }
+      });
       
       return {
         session_info: response.data,
@@ -1478,6 +1781,9 @@ class F1MCPServer {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
+      if (error.code === 'ECONNABORTED') {
+        throw new Error(`F1 LiveTiming API timeout - try again later`);
+      }
       throw new Error(`LiveTiming session info retrieval failed: ${error.message}`);
     }
   }
@@ -1488,7 +1794,10 @@ class F1MCPServer {
       if (meetingKey) url += `/${meetingKey}`;
       url += '/Heartbeat.json';
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, { 
+        timeout: 15000,
+        headers: { 'User-Agent': '180R-F1-Dashboard/1.0' }
+      });
       
       return {
         heartbeat: response.data,
@@ -1498,6 +1807,9 @@ class F1MCPServer {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
+      if (error.code === 'ECONNABORTED') {
+        throw new Error(`F1 LiveTiming API timeout - try again later`);
+      }
       throw new Error(`LiveTiming heartbeat retrieval failed: ${error.message}`);
     }
   }
