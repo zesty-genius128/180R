@@ -32,6 +32,7 @@ class F1MCPServer {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: [
+          // EXISTING TOOLS
           {
             name: 'get_current_session',
             description: 'Get current or next F1 session information',
@@ -211,6 +212,329 @@ class F1MCPServer {
               },
               required: []
             }
+          },
+          // NEW OPENF1 ENDPOINTS
+          {
+            name: 'get_car_data',
+            description: 'Get real-time car telemetry data (speed, throttle, brake, DRS, gear)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                },
+                driver_number: {
+                  type: 'number',
+                  description: 'Driver number (optional, all drivers if not provided)'
+                },
+                latest_only: {
+                  type: 'boolean',
+                  description: 'Get only latest data points (default: true)'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          {
+            name: 'get_intervals',
+            description: 'Get gap timing between drivers',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                },
+                driver_number: {
+                  type: 'number',
+                  description: 'Specific driver to analyze gaps for (optional)'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          {
+            name: 'get_location',
+            description: 'Get real-time GPS coordinates and track position data',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                },
+                driver_number: {
+                  type: 'number',
+                  description: 'Driver number (optional, all drivers if not provided)'
+                },
+                latest_only: {
+                  type: 'boolean',
+                  description: 'Get only latest positions (default: true)'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          {
+            name: 'get_pit_data',
+            description: 'Get pit stop data and timing information',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                },
+                driver_number: {
+                  type: 'number',
+                  description: 'Driver number (optional, all drivers if not provided)'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          {
+            name: 'get_race_control',
+            description: 'Get race director messages, flags, and safety information',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                },
+                category: {
+                  type: 'string',
+                  description: 'Filter by category (Flag, SafetyCar, DRS, etc.)'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          {
+            name: 'get_team_radio',
+            description: 'Get driver-team radio communications',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                },
+                driver_number: {
+                  type: 'number',
+                  description: 'Driver number (optional, all drivers if not provided)'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          {
+            name: 'get_session_result_beta',
+            description: 'Get official session results (beta endpoint)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          {
+            name: 'get_starting_grid_beta',
+            description: 'Get starting grid positions (beta endpoint)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                session_key: {
+                  type: 'string',
+                  description: 'Session key'
+                }
+              },
+              required: ['session_key']
+            }
+          },
+          // ERGAST API ENDPOINTS
+          {
+            name: 'get_ergast_circuits',
+            description: 'Get circuit information from Ergast API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year (optional)'
+                },
+                circuit_id: {
+                  type: 'string',
+                  description: 'Specific circuit ID (optional)'
+                }
+              },
+              required: []
+            }
+          },
+          {
+            name: 'get_ergast_constructors',
+            description: 'Get constructor/team information from Ergast API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year (optional)'
+                },
+                constructor_id: {
+                  type: 'string',
+                  description: 'Specific constructor ID (optional)'
+                }
+              },
+              required: []
+            }
+          },
+          {
+            name: 'get_ergast_drivers',
+            description: 'Get driver information from Ergast API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year (optional)'
+                },
+                driver_id: {
+                  type: 'string',
+                  description: 'Specific driver ID (optional)'
+                }
+              },
+              required: []
+            }
+          },
+          {
+            name: 'get_ergast_results',
+            description: 'Get race results from Ergast API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year'
+                },
+                round: {
+                  type: 'number',
+                  description: 'Race round (optional, current if not provided)'
+                }
+              },
+              required: ['year']
+            }
+          },
+          {
+            name: 'get_ergast_qualifying',
+            description: 'Get qualifying results from Ergast API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year'
+                },
+                round: {
+                  type: 'number',
+                  description: 'Race round (optional, current if not provided)'
+                }
+              },
+              required: ['year']
+            }
+          },
+          {
+            name: 'get_ergast_standings',
+            description: 'Get championship standings from Ergast API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year'
+                },
+                type: {
+                  type: 'string',
+                  enum: ['drivers', 'constructors'],
+                  description: 'Type of standings (drivers or constructors)'
+                },
+                round: {
+                  type: 'number',
+                  description: 'After which round (optional, latest if not provided)'
+                }
+              },
+              required: ['year', 'type']
+            }
+          },
+          // F1 LIVETIMING API ENDPOINTS
+          {
+            name: 'get_livetiming_data',
+            description: 'Get live timing data from F1 official LiveTiming API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year'
+                },
+                meeting_key: {
+                  type: 'string',
+                  description: 'Meeting key/identifier'
+                },
+                session_key: {
+                  type: 'string',
+                  description: 'Session key/identifier'
+                },
+                data_type: {
+                  type: 'string',
+                  enum: ['ArchiveStatus', 'AudioStreams', 'CarData', 'ContentStreams', 'DriverList', 'ExtrapolatedClock', 'Heartbeat', 'LapCount', 'LapSeries', 'Position', 'RaceControlMessages', 'SessionData', 'SessionInfo', 'SessionStatus', 'TeamRadio', 'TimingAppData', 'TimingData', 'TimingStats', 'TopThree', 'TrackStatus', 'WeatherData'],
+                  description: 'Type of live timing data to fetch'
+                }
+              },
+              required: ['year', 'data_type']
+            }
+          },
+          {
+            name: 'get_livetiming_session_info',
+            description: 'Get session information from F1 LiveTiming API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year'
+                },
+                meeting_key: {
+                  type: 'string',
+                  description: 'Meeting key (optional)'
+                }
+              },
+              required: ['year']
+            }
+          },
+          {
+            name: 'get_livetiming_heartbeat',
+            description: 'Get live session heartbeat and status from F1 LiveTiming API',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                year: {
+                  type: 'number',
+                  description: 'Season year'
+                },
+                meeting_key: {
+                  type: 'string',
+                  description: 'Meeting key'
+                }
+              },
+              required: ['year']
+            }
           }
         ]
       };
@@ -259,6 +583,60 @@ class F1MCPServer {
             break;
           case 'get_driver_form_analysis':
             result = await this.getDriverFormAnalysis(args?.driver_number, args?.races_back);
+            break;
+          // NEW OPENF1 ENDPOINTS
+          case 'get_car_data':
+            result = await this.getCarData(args?.session_key, args?.driver_number, args?.latest_only);
+            break;
+          case 'get_intervals':
+            result = await this.getIntervals(args?.session_key, args?.driver_number);
+            break;
+          case 'get_location':
+            result = await this.getLocation(args?.session_key, args?.driver_number, args?.latest_only);
+            break;
+          case 'get_pit_data':
+            result = await this.getPitData(args?.session_key, args?.driver_number);
+            break;
+          case 'get_race_control':
+            result = await this.getRaceControl(args?.session_key, args?.category);
+            break;
+          case 'get_team_radio':
+            result = await this.getTeamRadio(args?.session_key, args?.driver_number);
+            break;
+          case 'get_session_result_beta':
+            result = await this.getSessionResultBeta(args?.session_key);
+            break;
+          case 'get_starting_grid_beta':
+            result = await this.getStartingGridBeta(args?.session_key);
+            break;
+          // ERGAST API ENDPOINTS
+          case 'get_ergast_circuits':
+            result = await this.getErgastCircuits(args?.year, args?.circuit_id);
+            break;
+          case 'get_ergast_constructors':
+            result = await this.getErgastConstructors(args?.year, args?.constructor_id);
+            break;
+          case 'get_ergast_drivers':
+            result = await this.getErgastDrivers(args?.year, args?.driver_id);
+            break;
+          case 'get_ergast_results':
+            result = await this.getErgastResults(args?.year, args?.round);
+            break;
+          case 'get_ergast_qualifying':
+            result = await this.getErgastQualifying(args?.year, args?.round);
+            break;
+          case 'get_ergast_standings':
+            result = await this.getErgastStandings(args?.year, args?.type, args?.round);
+            break;
+          // F1 LIVETIMING API ENDPOINTS
+          case 'get_livetiming_data':
+            result = await this.getLiveTimingData(args?.year, args?.meeting_key, args?.session_key, args?.data_type);
+            break;
+          case 'get_livetiming_session_info':
+            result = await this.getLiveTimingSessionInfo(args?.year, args?.meeting_key);
+            break;
+          case 'get_livetiming_heartbeat':
+            result = await this.getLiveTimingHeartbeat(args?.year, args?.meeting_key);
             break;
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -724,6 +1102,559 @@ class F1MCPServer {
     } catch (error) {
       throw new Error(`Weather impact analysis failed: ${error.message}`);
     }
+  }
+
+  // NEW OPENF1 API ENDPOINTS
+  async getCarData(sessionKey, driverNumber = null, latestOnly = true) {
+    try {
+      const params = { session_key: sessionKey };
+      if (driverNumber) params.driver_number = driverNumber;
+      
+      const response = await axios.get(`${OPENF1_API}/car_data`, { params });
+      let carData = response.data;
+
+      if (latestOnly && carData.length > 0) {
+        // Group by driver and get latest data point for each
+        const latestByDriver = {};
+        carData.forEach(data => {
+          const driver = data.driver_number;
+          if (!latestByDriver[driver] || new Date(data.date) > new Date(latestByDriver[driver].date)) {
+            latestByDriver[driver] = data;
+          }
+        });
+        carData = Object.values(latestByDriver);
+      }
+
+      return {
+        session_key: sessionKey,
+        car_data: carData,
+        data_points: carData.length,
+        drivers_count: new Set(carData.map(d => d.driver_number)).size,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Car data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getIntervals(sessionKey, driverNumber = null) {
+    try {
+      const params = { session_key: sessionKey };
+      if (driverNumber) params.driver_number = driverNumber;
+      
+      const response = await axios.get(`${OPENF1_API}/intervals`, { params });
+      const intervals = response.data;
+
+      // Analyze gap trends
+      const gapAnalysis = this.analyzeGapTrends(intervals);
+      
+      return {
+        session_key: sessionKey,
+        intervals: intervals,
+        gap_analysis: gapAnalysis,
+        total_data_points: intervals.length,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Intervals data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getLocation(sessionKey, driverNumber = null, latestOnly = true) {
+    try {
+      const params = { session_key: sessionKey };
+      if (driverNumber) params.driver_number = driverNumber;
+      
+      const response = await axios.get(`${OPENF1_API}/location`, { params });
+      let locationData = response.data;
+
+      if (latestOnly && locationData.length > 0) {
+        // Get latest position for each driver
+        const latestByDriver = {};
+        locationData.forEach(loc => {
+          const driver = loc.driver_number;
+          if (!latestByDriver[driver] || new Date(loc.date) > new Date(latestByDriver[driver].date)) {
+            latestByDriver[driver] = loc;
+          }
+        });
+        locationData = Object.values(latestByDriver);
+      }
+
+      return {
+        session_key: sessionKey,
+        location_data: locationData,
+        track_coverage: this.analyzeTrackCoverage(locationData),
+        data_points: locationData.length,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Location data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getPitData(sessionKey, driverNumber = null) {
+    try {
+      const params = { session_key: sessionKey };
+      if (driverNumber) params.driver_number = driverNumber;
+      
+      const response = await axios.get(`${OPENF1_API}/pit`, { params });
+      const pitData = response.data;
+
+      // Analyze pit stop patterns
+      const pitAnalysis = this.analyzePitStopPatterns(pitData);
+      
+      return {
+        session_key: sessionKey,
+        pit_data: pitData,
+        pit_analysis: pitAnalysis,
+        total_pit_stops: pitData.length,
+        drivers_pitted: new Set(pitData.map(p => p.driver_number)).size,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Pit data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getRaceControl(sessionKey, category = null) {
+    try {
+      const params = { session_key: sessionKey };
+      if (category) params.category = category;
+      
+      const response = await axios.get(`${OPENF1_API}/race_control`, { params });
+      const raceControlData = response.data;
+
+      // Categorize messages
+      const categorizedMessages = this.categorizeRaceControlMessages(raceControlData);
+      
+      return {
+        session_key: sessionKey,
+        race_control_messages: raceControlData,
+        categorized_messages: categorizedMessages,
+        total_messages: raceControlData.length,
+        session_incidents: categorizedMessages.incidents?.length || 0,
+        flags_issued: categorizedMessages.flags?.length || 0,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Race control data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getTeamRadio(sessionKey, driverNumber = null) {
+    try {
+      const params = { session_key: sessionKey };
+      if (driverNumber) params.driver_number = driverNumber;
+      
+      const response = await axios.get(`${OPENF1_API}/team_radio`, { params });
+      const teamRadio = response.data;
+
+      // Analyze radio frequency and topics
+      const radioAnalysis = this.analyzeTeamRadio(teamRadio);
+      
+      return {
+        session_key: sessionKey,
+        team_radio: teamRadio,
+        radio_analysis: radioAnalysis,
+        total_transmissions: teamRadio.length,
+        drivers_active: new Set(teamRadio.map(r => r.driver_number)).size,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Team radio data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getSessionResultBeta(sessionKey) {
+    try {
+      const response = await axios.get(`${OPENF1_API}/session_result`, {
+        params: { session_key: sessionKey }
+      });
+      
+      return {
+        session_key: sessionKey,
+        session_result: response.data,
+        note: 'This is a beta endpoint - data structure may change',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Session result (beta) retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getStartingGridBeta(sessionKey) {
+    try {
+      const response = await axios.get(`${OPENF1_API}/starting_grid`, {
+        params: { session_key: sessionKey }
+      });
+      
+      return {
+        session_key: sessionKey,
+        starting_grid: response.data,
+        note: 'This is a beta endpoint - data structure may change',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Starting grid (beta) retrieval failed: ${error.message}`);
+    }
+  }
+
+  // ERGAST API ENDPOINTS
+  async getErgastCircuits(year = null, circuitId = null) {
+    try {
+      let url = `${ERGAST_API}`;
+      if (year) url += `/${year}`;
+      url += `/circuits`;
+      if (circuitId) url += `/${circuitId}`;
+      url += '.json';
+
+      const response = await axios.get(url);
+      const circuits = response.data.MRData.CircuitTable.Circuits;
+      
+      return {
+        circuits,
+        total_circuits: circuits.length,
+        year: year || 'all',
+        source: 'Ergast API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Ergast circuits data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getErgastConstructors(year = null, constructorId = null) {
+    try {
+      let url = `${ERGAST_API}`;
+      if (year) url += `/${year}`;
+      url += `/constructors`;
+      if (constructorId) url += `/${constructorId}`;
+      url += '.json';
+
+      const response = await axios.get(url);
+      const constructors = response.data.MRData.ConstructorTable.Constructors;
+      
+      return {
+        constructors,
+        total_constructors: constructors.length,
+        year: year || 'all',
+        source: 'Ergast API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Ergast constructors data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getErgastDrivers(year = null, driverId = null) {
+    try {
+      let url = `${ERGAST_API}`;
+      if (year) url += `/${year}`;
+      url += `/drivers`;
+      if (driverId) url += `/${driverId}`;
+      url += '.json';
+
+      const response = await axios.get(url);
+      const drivers = response.data.MRData.DriverTable.Drivers;
+      
+      return {
+        drivers,
+        total_drivers: drivers.length,
+        year: year || 'all',
+        source: 'Ergast API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Ergast drivers data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getErgastResults(year, round = null) {
+    try {
+      let url = `${ERGAST_API}/${year}`;
+      if (round) url += `/${round}`;
+      url += '/results.json';
+
+      const response = await axios.get(url);
+      const races = response.data.MRData.RaceTable.Races;
+      
+      return {
+        races,
+        total_races: races.length,
+        year,
+        round: round || 'all',
+        source: 'Ergast API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Ergast results data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getErgastQualifying(year, round = null) {
+    try {
+      let url = `${ERGAST_API}/${year}`;
+      if (round) url += `/${round}`;
+      url += '/qualifying.json';
+
+      const response = await axios.get(url);
+      const races = response.data.MRData.RaceTable.Races;
+      
+      return {
+        races,
+        total_races: races.length,
+        year,
+        round: round || 'all',
+        source: 'Ergast API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Ergast qualifying data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getErgastStandings(year, type, round = null) {
+    try {
+      let url = `${ERGAST_API}/${year}`;
+      if (round) url += `/${round}`;
+      url += `/${type}Standings.json`;
+
+      const response = await axios.get(url);
+      const standingsTable = type === 'drivers' ? 
+        response.data.MRData.StandingsTable.StandingsLists[0].DriverStandings :
+        response.data.MRData.StandingsTable.StandingsLists[0].ConstructorStandings;
+      
+      return {
+        standings: standingsTable,
+        type,
+        year,
+        round: round || 'current',
+        total_entries: standingsTable.length,
+        source: 'Ergast API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`Ergast standings data retrieval failed: ${error.message}`);
+    }
+  }
+
+  // F1 LIVETIMING API ENDPOINTS
+  async getLiveTimingData(year, meetingKey = null, sessionKey = null, dataType) {
+    try {
+      let url = `${F1_LIVETIMING_API}/${year}`;
+      if (meetingKey) url += `/${meetingKey}`;
+      if (sessionKey) url += `/${sessionKey}`;
+      url += `/${dataType}.json`;
+
+      const response = await axios.get(url);
+      
+      return {
+        data: response.data,
+        data_type: dataType,
+        year,
+        meeting_key: meetingKey,
+        session_key: sessionKey,
+        source: 'F1 LiveTiming API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`LiveTiming data retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getLiveTimingSessionInfo(year, meetingKey = null) {
+    try {
+      let url = `${F1_LIVETIMING_API}/${year}`;
+      if (meetingKey) url += `/${meetingKey}`;
+      url += '/SessionInfo.json';
+
+      const response = await axios.get(url);
+      
+      return {
+        session_info: response.data,
+        year,
+        meeting_key: meetingKey,
+        source: 'F1 LiveTiming API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`LiveTiming session info retrieval failed: ${error.message}`);
+    }
+  }
+
+  async getLiveTimingHeartbeat(year, meetingKey = null) {
+    try {
+      let url = `${F1_LIVETIMING_API}/${year}`;
+      if (meetingKey) url += `/${meetingKey}`;
+      url += '/Heartbeat.json';
+
+      const response = await axios.get(url);
+      
+      return {
+        heartbeat: response.data,
+        year,
+        meeting_key: meetingKey,
+        source: 'F1 LiveTiming API',
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      throw new Error(`LiveTiming heartbeat retrieval failed: ${error.message}`);
+    }
+  }
+
+  // Helper methods for new endpoints
+  analyzeGapTrends(intervals) {
+    if (intervals.length < 2) return { trend: 'insufficient_data' };
+    
+    const driverGaps = {};
+    intervals.forEach(interval => {
+      if (!driverGaps[interval.driver_number]) {
+        driverGaps[interval.driver_number] = [];
+      }
+      driverGaps[interval.driver_number].push({
+        gap: interval.gap_to_leader || interval.interval,
+        timestamp: interval.date
+      });
+    });
+
+    const trends = {};
+    Object.entries(driverGaps).forEach(([driver, gaps]) => {
+      if (gaps.length >= 2) {
+        const recent = gaps.slice(-3);
+        const early = gaps.slice(0, 3);
+        const recentAvg = recent.reduce((sum, g) => sum + (parseFloat(g.gap) || 0), 0) / recent.length;
+        const earlyAvg = early.reduce((sum, g) => sum + (parseFloat(g.gap) || 0), 0) / early.length;
+        
+        trends[driver] = {
+          trend: recentAvg > earlyAvg ? 'falling_back' : recentAvg < earlyAvg ? 'catching_up' : 'stable',
+          gap_change: recentAvg - earlyAvg,
+          current_gap: recent[recent.length - 1]?.gap
+        };
+      }
+    });
+
+    return trends;
+  }
+
+  analyzeTrackCoverage(locationData) {
+    if (locationData.length === 0) return { coverage: 'no_data' };
+    
+    const xCoords = locationData.map(l => l.x).filter(x => x !== undefined);
+    const yCoords = locationData.map(l => l.y).filter(y => y !== undefined);
+    
+    if (xCoords.length === 0 || yCoords.length === 0) {
+      return { coverage: 'incomplete_coordinates' };
+    }
+
+    return {
+      x_range: { min: Math.min(...xCoords), max: Math.max(...xCoords) },
+      y_range: { min: Math.min(...yCoords), max: Math.max(...yCoords) },
+      total_points: locationData.length,
+      track_completion: this.estimateTrackCompletion(locationData)
+    };
+  }
+
+  estimateTrackCompletion(locationData) {
+    // Simple estimation based on coordinate spread
+    const drivers = new Set(locationData.map(l => l.driver_number));
+    return {
+      drivers_tracked: drivers.size,
+      data_density: locationData.length / drivers.size
+    };
+  }
+
+  analyzePitStopPatterns(pitData) {
+    if (pitData.length === 0) return { pattern: 'no_pit_stops' };
+    
+    const patterns = {
+      total_stops: pitData.length,
+      drivers_pitted: new Set(pitData.map(p => p.driver_number)).size,
+      pit_timing: {},
+      pit_duration_stats: this.calculatePitDurationStats(pitData)
+    };
+
+    // Analyze pit timing patterns
+    pitData.forEach(pit => {
+      const driver = pit.driver_number;
+      if (!patterns.pit_timing[driver]) {
+        patterns.pit_timing[driver] = [];
+      }
+      patterns.pit_timing[driver].push({
+        lap: pit.lap_number,
+        duration: pit.pit_duration,
+        timestamp: pit.date
+      });
+    });
+
+    return patterns;
+  }
+
+  calculatePitDurationStats(pitData) {
+    const durations = pitData.map(p => p.pit_duration).filter(d => d && d > 0);
+    if (durations.length === 0) return { average: null, fastest: null, slowest: null };
+    
+    return {
+      average: durations.reduce((sum, d) => sum + d, 0) / durations.length,
+      fastest: Math.min(...durations),
+      slowest: Math.max(...durations),
+      total_stops: durations.length
+    };
+  }
+
+  categorizeRaceControlMessages(raceControlData) {
+    const categories = {
+      flags: [],
+      safety_car: [],
+      drs: [],
+      incidents: [],
+      other: []
+    };
+
+    raceControlData.forEach(message => {
+      const msg = message.message?.toLowerCase() || '';
+      const category = message.category?.toLowerCase() || '';
+      
+      if (msg.includes('flag') || category.includes('flag')) {
+        categories.flags.push(message);
+      } else if (msg.includes('safety car') || msg.includes('virtual safety') || category.includes('safetycar')) {
+        categories.safety_car.push(message);
+      } else if (msg.includes('drs') || category.includes('drs')) {
+        categories.drs.push(message);
+      } else if (msg.includes('incident') || msg.includes('investigation') || category.includes('incident')) {
+        categories.incidents.push(message);
+      } else {
+        categories.other.push(message);
+      }
+    });
+
+    return categories;
+  }
+
+  analyzeTeamRadio(teamRadio) {
+    if (teamRadio.length === 0) return { analysis: 'no_radio_data' };
+    
+    const analysis = {
+      total_transmissions: teamRadio.length,
+      drivers_active: new Set(teamRadio.map(r => r.driver_number)).size,
+      transmission_frequency: {},
+      recent_activity: teamRadio.slice(-10), // Last 10 transmissions
+      driver_activity: {}
+    };
+
+    // Analyze per-driver activity
+    teamRadio.forEach(radio => {
+      const driver = radio.driver_number;
+      if (!analysis.driver_activity[driver]) {
+        analysis.driver_activity[driver] = {
+          transmissions: 0,
+          last_transmission: null
+        };
+      }
+      analysis.driver_activity[driver].transmissions++;
+      analysis.driver_activity[driver].last_transmission = radio.date;
+    });
+
+    return analysis;
   }
 
   // Helper methods for analysis
