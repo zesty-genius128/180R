@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: f1-predictor-ingress
+  namespace: f1-predictor
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/websocket-services: node-backend-service
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: f1-predictor.local
+    http:
+      paths:
+      # Frontend routes
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+      # API routes
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: node-backend-service
+            port:
+              number: 3001
+      # WebSocket route
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: node-backend-service
+            port:
+              number: 3001

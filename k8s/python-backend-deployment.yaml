@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-backend
+  namespace: f1-predictor
+  labels:
+    app: python-backend
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: python-backend
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: python-backend
+        tier: backend
+    spec:
+      containers:
+      - name: python-backend
+        image: f1-predictor/python-backend:latest
+        ports:
+        - containerPort: 5001
+          name: http
+        envFrom:
+        - configMapRef:
+            name: f1-config
+        volumeMounts:
+        - name: cache-storage
+          mountPath: /app/cache
+        - name: logs-storage
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5001
+          initialDelaySeconds: 45
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: cache-storage
+        persistentVolumeClaim:
+          claimName: f1-cache-pvc
+      - name: logs-storage
+        persistentVolumeClaim:
+          claimName: f1-logs-pvc
+      restartPolicy: Always
