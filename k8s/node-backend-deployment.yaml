@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-backend
+  namespace: f1-predictor
+  labels:
+    app: node-backend
+    tier: gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: node-backend
+      tier: gateway
+  template:
+    metadata:
+      labels:
+        app: node-backend
+        tier: gateway
+    spec:
+      containers:
+      - name: node-backend
+        image: f1-predictor/node-backend:latest
+        ports:
+        - containerPort: 3001
+          name: http
+        - containerPort: 3001
+          name: websocket
+        envFrom:
+        - configMapRef:
+            name: f1-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      restartPolicy: Always
